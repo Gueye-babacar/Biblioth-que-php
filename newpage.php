@@ -3,8 +3,45 @@
 // Souvent on identifie cet objet par la variable $conn ou $db
 $pdo = new PDO ('mysql:host=localhost;dbname=Library',"root", "");
 
+$sqlBook = 'SELECT b.*, a.name FROM book b LEFT JOIN author a ON a.id = b.author_id WHERE 1';
 
-$books = $pdo->query('SELECT b.*, a.name FROM book b LEFT JOIN author a ON a.id = b.author_id');
+$title = "";
+$author_id = "";
+
+if (!empty($_POST)) {
+    if (!empty($_POST['title'])) {
+        $title = $_POST['title'];
+        $sqlBook .= " AND b.title LIKE :title";
+    }
+
+    if (!empty($_POST['author_id'])) {
+        $author_id = $_POST['author_id'];
+        $sqlBook .= " AND b.author_id = :author_id";
+    }
+  }
+
+  $query = $pdo->prepare($sqlBook);
+
+  if (!empty($_POST)) {
+    if (!empty($_POST['author_id'])) {
+      $query->bindValue(':author_id', $_POST['author_id'], PDO::PARAM_INT);
+    }
+
+    if (!empty($_POST['title'])) {
+      $query->bindValue(':title', '%'.$_POST['title'].'%', PDO::PARAM_STR);
+    }
+  }
+
+try {
+    $query->execute();
+} catch (PDOException $pe) {
+    echo $pe->getMessage(); die;
+}
+  
+  $books = $query->fetchAll(PDO::FETCH_ASSOC);
+
+  $authorsSql = "SELECT * FROM author";
+  $authors = $pdo->query($authorsSql)->fetchAll();
 
 ?>
 <!DOCTYPE html>
@@ -21,6 +58,13 @@ $books = $pdo->query('SELECT b.*, a.name FROM book b LEFT JOIN author a ON a.id 
 </head>
 <body>
     <main class="container">
+        <div class="row">
+            <form method="post">
+                <input name="title" type="text" value="<?= $title ?>"/>
+                <input name="author_id" type="text" value="<?= $author_id ?>"/>
+                <input  class="btn btn-success" type="submit" value="Filtrer"/>
+            </form>
+        </div>
         <div class="row">
             <section class="col -12">
                 <h1>Liste des livres</h1>
